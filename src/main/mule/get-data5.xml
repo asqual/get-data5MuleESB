@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="e0e6dc46-0b0e-4130-8b56-f03f2b0a6810" doc:description="This application is to test how to send one header and get data from the database. the database i use is called northwind and the table is Employee and the column name is city. this returns java output, i transform it to csv and write it to disk. but in order to write the value of the header to another disk , we have to set it to a variable since our header value is going to change across the flow. so we have to add one set variable immediately after our listener." >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="a228025a-8295-4fdb-9df6-9997d7341dd7" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="Asq@22w0rd#" database="northwind" />
+	</db:config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="758bc482-08ef-46cc-ae0d-59328926b84c" >
+		<file:connection workingDir="C:\Mulesoft\datafromdatabasees" />
+	</file:config>
+	<flow name="get-data5Flow" doc:id="a614fa29-2aa3-46ca-af3a-5a89c76fd403" >
+		<http:listener doc:name="Listener" doc:id="2d320b3d-c42c-41e0-aaf7-34c3bbfcb1d1" doc:description="This application is to test how to send one header and get data from the database. the database i use is called northwind and the table is Employee and the column name is city. this returns java output, i transform it to csv and write it to disk. but in order to write the value of the header to another disk , we have to set it to a variable since our header value is going to change across the flow. so we have to add one set variable immediately after our listener." config-ref="HTTP_Listener_config" path="get-data"/>
+		<logger level="INFO" doc:name="Logger" doc:id="3ed38936-3688-4b11-a1e9-b4d0690acaee" message='#["The Submitted header is: " ++ attributes.headers.city]'/>
+		<set-variable value="#[attributes.headers.city]" doc:name="Set City" doc:id="113da482-e1e9-4e60-a21d-6bb56628a8a1" variableName="cityvar"/>
+		<db:select doc:name="Get data from MySQL" doc:id="fa0317bd-8c17-41ed-bbe9-96fc4230d55e" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * FROM employee where city= :city]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{'city' : attributes.headers.city}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="To csv" doc:id="43760a11-80d7-4669-aaf9-09317e6d52f0" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/csv
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="Write To Disk" doc:id="e31f0653-8c13-4a46-b231-8dfd86e0a47f" config-ref="File_Config" path='#[vars.cityvar ++ ".csv"]'/>
+	</flow>
+</mule>
